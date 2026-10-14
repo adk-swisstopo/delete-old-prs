@@ -109,7 +109,7 @@ def main(argv):
 	parser.add_argument('-l', '--new-lines', action=argparse.BooleanOptionalAction, default=False)
 	args = parser.parse_args(argv[1:])
 	if args.days < 7:
-		print('Automatically deleting branches that are only {args.days} days old sounds dangerous. Not proceeding.')
+		print('Automatically deleting branches that are only {args.days} days old sounds dangerous. Not proceeding.', file=sys.stderr)
 		return -1
 	if not args.repos and not args.organizations:
 		args.organizations = ('geoadmin', 'swissgeo')
