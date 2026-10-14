@@ -92,9 +92,6 @@ def main(argv):
 	prs_count = 0
 	for pr in ListPrs(ghc, organizations=args.organizations, repos=args.repos):
 		prs_count += 1
-		if args.repos and pr.repo_name not in args.repos:
-			print(f'{pr}: skipped: not in allow-listed repos: {args.repos}', file=sys.stderr)
-			continue
 		if not pr.is_open():
 			print(f'{pr}: skipped: not state "open"', file=sys.stderr)
 			continue
