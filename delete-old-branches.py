@@ -84,7 +84,7 @@ class ProgressTracker(object):
 		full_message = f'{self.current}/{self.total} {message}'
 		try:
 			term_width = os.get_terminal_size().columns
-		except os.OSError:
+		except OSError:
 			term_width = 80
 		if self.newlines:
 			full_message = f'{full_message}\n'
