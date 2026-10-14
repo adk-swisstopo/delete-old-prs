@@ -11,10 +11,6 @@ import yaml
 class PullRequest(object):
 	def __init__(self, repo, pr):
 		self._repo = repo
-		# last_modified_datetime comes from last-modified header
-		# it seems to change spuriously
-		# it is not available on get_pulls(), only on get_pull()
-		# updated_at seems to track is updated less often but it seems to track what we want and it available on get_pulls()
 		self._pr = pr
 
 	def __str__(self):
@@ -30,6 +26,15 @@ class PullRequest(object):
 
 	@property
 	def updated_at(self):
+		# Another interesting field is last_modified_datetime, which
+		# comes from the last-modified header of the response. However
+		# it seems to change rather spuriously. That is, old PRs that
+		# have had no obvious changes often have a quite recent
+		# last_modified_datetime field. Furthermore, that field is only
+		# populated when the PR is retrieved invidually, not via an
+		# operation that retrieves multiple PRs.
+		# In comparison, updated_at seems to have the desired semantic
+		# and does not require an API call for each PR.
 		return self._pr.updated_at
 
 	def is_open(self):
@@ -84,7 +89,6 @@ def main(argv):
 	if not args.repos and not args.organizations:
 		args.organizations = ('geoadmin', 'swissgeo')
 
-	# TODO: parameterise ~everything
 	now = datetime.datetime.now(tz=pytz.UTC)
 	closeable_dt = now - datetime.timedelta(days=args.days)
 	ghc = github.Github(auth=github.Auth.Token(FindToken()))
