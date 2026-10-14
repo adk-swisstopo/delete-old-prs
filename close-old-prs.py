@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import argparse
 import datetime
 import github
 import os
@@ -8,8 +9,7 @@ import sys
 import yaml
 
 class PullRequest(object):
-	def __init__(self, organization, repo, pr):
-		self._organization = organization
+	def __init__(self, repo, pr):
 		self._repo = repo
 		# last_modified_datetime comes from last-modified header
 		# it seems to change spuriously
@@ -22,7 +22,11 @@ class PullRequest(object):
 
 	@property
 	def repo_path(self):
-		return f'https://github.com/{self._organization.login}/{self._repo.name}'
+		return f'https://github.com/{self._repo.full_name}'
+
+	@property
+	def repo_name(self):
+		return self._repo.name
 
 	@property
 	def updated_at(self):
@@ -36,12 +40,22 @@ class PullRequest(object):
 		self._pr.create_comment(comment)
 		self._pr.edit(state='closed')
 
-def ListPrs(ghc, org_names):
-	for org_name in org_names:
-		org = ghc.get_organization(org_name)
-		for repo in org.get_repos():
-			for pr in repo.get_pulls():
-				yield PullRequest(organization=org, repo=repo, pr=pr)
+def GetRepos(ghc, organizations=None, repos=None):
+	if not organizations:
+		for repo in repos:
+			yield ghc.get_repo(repo)
+	else:
+		for org_name in organizations:
+			org = ghc.get_organization(org_name)
+			for repo in org.get_repos():
+				if repos and repo.name not in repos:
+					continue
+				yield repo
+
+def ListPrs(ghc, organizations=None, repos=None):
+	for repo in GetRepos(ghc, organizations=organizations, repos=repos):
+		for pr in repo.get_pulls():
+			yield PullRequest(repo=repo, pr=pr)
 
 def FindToken():
 	token = os.getenv('GITHUB_TOKEN')
@@ -56,15 +70,31 @@ def GetTockenFromGHConfig():
 		return config['github.com']['oauth_token']
 
 def main(argv):
+	parser = argparse.ArgumentParser(
+		prog='close-old-prs',
+		description='Close GitHub PRs that were not updated for a long time.')
+	parser.add_argument('-d', '--days', type=int, default=90)
+	parser.add_argument('-O', '--organizations', action='append')
+	parser.add_argument('-r', '--repos', action='append')
+	parser.add_argument('-n', '--dry-run', action=argparse.BooleanOptionalAction, default=True)
+	args = parser.parse_args(argv[1:])
+	if args.days < 7:
+		print('Automatically closing PRs that are only {args.days} days old sounds dangerous. Not proceeding.')
+		return -1
+	if not args.repos and not args.organizations:
+		args.organizations = ('geoadmin', 'swissgeo')
+
 	# TODO: parameterise ~everything
-	DEFAULT_ORGS=('geoadmin', 'swissgeo')
 	now = datetime.datetime.now(tz=pytz.UTC)
-	closeable_dt = now - datetime.timedelta(days=90)
+	closeable_dt = now - datetime.timedelta(days=args.days)
 	ghc = github.Github(auth=github.Auth.Token(FindToken()))
 	prs_to_close = set()
 	prs_count = 0
-	for pr in ListPrs(ghc, DEFAULT_ORGS):
+	for pr in ListPrs(ghc, organizations=args.organizations, repos=args.repos):
 		prs_count += 1
+		if args.repos and pr.repo_name not in args.repos:
+			print(f'{pr}: skipped: not in allow-listed repos: {args.repos}', file=sys.stderr)
+			continue
 		if not pr.is_open():
 			print(f'{pr}: skipped: not state "open"', file=sys.stderr)
 			continue
@@ -79,8 +109,13 @@ def main(argv):
 	#       don't close more than X% total
 	#       don't close more than Y% per repo that have more than Z PRs open
 	#	skip PRs that have the no-auto-close label
-	# TODO: actually close:
-	#	pr.close('This PR has not been updated in a long time and is now being closed. Feel free to reopen if needed.')
+	for pr in prs_to_close:
+		if args.dry_run:
+			print(f'dry run: not closing {pr}')
+		else:
+			# TODO: actually close:
+			#	pr.close('This PR has not been updated in a long time and is now being closed. Feel free to reopen if needed.')
+			print(f'actually closing {pr} (not really)')
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
