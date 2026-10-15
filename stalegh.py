@@ -72,6 +72,13 @@ class PullRequest(object):
 		# and does not require an API call for each PR.
 		return self._pr.updated_at
 
+	def ModifiedSince(self, stale_cutoff):
+		return self.updated_at > stale_cutoff
+
+	def GetAge(self):
+		now = datetime.datetime.now(tz=pytz.UTC)
+		return now - self.updated_at
+
 	def is_open(self):
 		return self._pr.state == 'open'
 

@@ -11,8 +11,8 @@ def LogScanProgress(current, total, message):
 
 def main(argv):
 	parser = argparse.ArgumentParser(
-		prog='close-old-prs',
-		description='Close GitHub PRs that were not updated for a long time.')
+		prog='branches',
+		description='List or delete GitHub branches that were not updated for a long time.')
 	parser.add_argument('-d', '--days', type=int, default=90)
 	parser.add_argument('-O', '--organizations', action='append')
 	parser.add_argument('-r', '--repos', action='append')
