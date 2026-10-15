@@ -3,11 +3,18 @@
 import argparse
 import datetime
 import pytz
+import re
 import stalegh
 import sys
 
 def LogScanProgress(current, total, message):
 	stalegh.Log(f'{current}/{total} eligible branches. {message}')
+
+def MultiMatch(patterns, string):
+	for pattern in patterns:
+		if re.fullmatch(pattern, string):
+			return True
+	return False
 
 def main(argv):
 	parser = argparse.ArgumentParser(
@@ -16,7 +23,7 @@ def main(argv):
 	parser.add_argument('-d', '--days', type=int, default=90)
 	parser.add_argument('-O', '--organizations', action='append')
 	parser.add_argument('-r', '--repos', action='append')
-	parser.add_argument('-k', '--branches_to_keep', action='append', default=['master', 'main', 'develop'])
+	parser.add_argument('-k', '--branches_to_keep', action='append', default=['master', 'main', 'develop(-.*)?'])
 	parser.add_argument('-a', '--action', default='print')
 	args = parser.parse_args(argv[1:])
 	if args.action not in ('print', 'delete'):
@@ -39,7 +46,7 @@ def main(argv):
 		if branch.IsDefault():
 			LogScanProgress(len(branches_to_process), branches_total, f'Skipped: default branch: {branch}')
 			continue
-		if branch.name in args.branches_to_keep:
+		if MultiMatch(args.branches_to_keep, branch.name):
 			LogScanProgress(len(branches_to_process), branches_total, f'Skipped: in list of branches to keep: {branch}')
 			continue
 		if branch.HasOpenPr():
