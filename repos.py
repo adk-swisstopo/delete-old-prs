@@ -52,7 +52,7 @@ def main(argv):
 		elif args.action == 'print':
 			name = f'https://github.com/{repo.full_name}'
 			age = now - repo.updated_at
-			print(f'{name} last updated {age.days} days ago')
+			print(f'{name} last updated {age.days} days ago, delete_branch_on_merge={repo.delete_branch_on_merge}')
 		i += 1
 		stalegh.Log(f'{i}/{len(repos_to_process)} repos processed: {repo}')
 
